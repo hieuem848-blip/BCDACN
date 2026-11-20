@@ -1,0 +1,52 @@
+import { Route, Routes } from "react-router-dom";
+import AccountLayout from "./layouts/AccountLayout";
+import Booking from "./pages/Booking";
+import Bookings from "./pages/Bookings";
+import Dashboard from "./pages/Dashboard";
+import Destinations from "./pages/Destinations";
+import Home from "./pages/Home";
+import HotelDetails from "./pages/HotelDetails";
+import Hotels from "./pages/Hotels";
+import Login from "./pages/Login";
+import Notifications from "./pages/Notifications";
+import Offers from "./pages/Offers";
+import Profile from "./pages/Profile";
+import Wishlist from "./pages/Wishlist";
+import ManagerLogin from "./pages/ManagerLogin";  
+import MyReviews from "./pages/MyReviews";
+import BookingLookup from "./pages/BookingLookup";
+import BookingSuccess from "./pages/BookingSuccess";
+import PaymentResult from "./pages/PaymentResult";
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/hotels" element={<Hotels />} />
+      <Route path="/hotels/:slug" element={<HotelDetails />} />
+      <Route path="/destinations" element={<Destinations />} />
+      <Route path="/offers" element={<Offers />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="/booking" element={<Booking />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/manager/login" element={<ManagerLogin />} />
+      <Route path="/manager/Login" element={<ManagerLogin />} />
+      <Route path="/staff/login" element={<ManagerLogin />} /> 
+      <Route path="/Staff/Login" element={<ManagerLogin />} /> 
+      <Route path="/booking/success" element={<BookingSuccess />} />
+      <Route path="/payment/result" element={<PaymentResult />} />
+      <Route path="/booking/lookup" element={<BookingLookup />} />    
+
+      {/* Các trang tài khoản dùng chung khung 2 cột */}
+      <Route element={<AccountLayout />}>
+        <Route path="/profile" element={<Profile />} />
+        <Route path="/bookings" element={<Bookings />} />
+        <Route path="/wishlist" element={<Wishlist />} />
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/reviews" element={<MyReviews />} />
+      </Route>
+    </Routes>
+  );
+}
+
+export default App;

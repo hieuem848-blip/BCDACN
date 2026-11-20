@@ -1,0 +1,398 @@
+import { useEffect, useState, useMemo } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import {
+    ArrowLeft,
+    MapPin,
+    Star,
+    Heart,
+    CheckCircle2,
+    Users,
+    Camera,
+    MessageSquareText,
+} from "lucide-react";
+import Navbar from "../components/Navbar";
+import Footer from "../components/Footer";
+import ReviewCard from "../components/ReviewCard";
+import StarRating from "../components/StarRating";
+import { getHotelBySlug } from "../api/hotelApi";
+import { useWishlist } from "../context/WishlistContext";
+
+const money = (n) => new Intl.NumberFormat("vi-VN").format(n);
+
+export default function HotelDetails() {
+    const { slug } = useParams();
+    const nav = useNavigate();
+    const [data, setData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [reviewFilter, setReviewFilter] = useState("ALL");
+    const { isLiked, toggleLike } = useWishlist();
+
+    useEffect(() => {
+        setLoading(true);
+        getHotelBySlug(slug)
+            .then((r) => setData(r.data))
+            .catch(() => setData(null))
+            .finally(() => setLoading(false));
+    }, [slug]);
+
+    const reviews = useMemo(() => data?.reviews || [], [data?.reviews]);
+
+    const reviewStats = useMemo(() => {
+        const total = reviews.length;
+        const withPhotos = reviews.filter((r) => r.images && r.images.length > 0).length;
+        const counts = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
+        let sum = 0;
+        reviews.forEach((r) => {
+            if (counts[r.rating] !== undefined) counts[r.rating]++;
+            sum += r.rating || 0;
+        });
+        const average =
+            total > 0 ? (sum / total).toFixed(1) : (data?.hotel?.averageRating || 5).toFixed(1);
+        return { total, withPhotos, counts, average };
+    }, [reviews, data?.hotel?.averageRating]);
+
+    const filteredReviews = useMemo(() => {
+        if (reviewFilter === "ALL") return reviews;
+        if (reviewFilter === "WITH_PHOTOS") {
+            return reviews.filter((r) => r.images && r.images.length > 0);
+        }
+        return reviews.filter((r) => String(r.rating) === String(reviewFilter));
+    }, [reviews, reviewFilter]);
+
+    if (loading) {
+        return (
+            <>
+                <Navbar />
+                <main className="mx-auto max-w-7xl px-6 py-20">
+                    <div className="h-96 animate-pulse rounded-3xl bg-slate-100" />
+                </main>
+                <Footer />
+            </>
+        );
+    }
+
+    if (!data || !data.hotel) {
+        return (
+            <>
+                <Navbar />
+                <main className="mx-auto max-w-7xl px-6 py-24 text-center">
+                    <h1 className="text-2xl font-bold">Không tìm thấy khách sạn</h1>
+                    <Link to="/hotels" className="mt-4 inline-block text-blue-600">
+                        Quay lại
+                    </Link>
+                </main>
+                <Footer />
+            </>
+        );
+    }
+
+    const { hotel, roomTypes = [] } = data;
+    const minPrice =
+        roomTypes.length > 0 ? Math.min(...roomTypes.map((r) => r.basePrice)) : 0;
+
+    return (
+        <div className="min-h-screen bg-slate-50">
+            <Navbar />
+
+            <main className="mx-auto max-w-7xl px-6 py-8">
+                <Link
+                    to="/hotels"
+                    className="mb-5 inline-flex items-center gap-2 text-sm text-slate-500 hover:text-blue-600"
+                >
+                    <ArrowLeft size={16} />
+                    Quay lại danh sách
+                </Link>
+
+                <section className="overflow-hidden rounded-3xl bg-white shadow-sm">
+                    <div className="grid gap-2 p-2 md:h-[500px] md:grid-cols-[1.6fr_1fr]">
+                        <img
+                            src={hotel.images?.[0]?.url}
+                            alt={hotel.name}
+                            className="h-full min-h-72 w-full rounded-2xl object-cover"
+                        />
+
+                        <div className="grid grid-cols-2 gap-2">
+                            <img
+                                src={hotel.images?.[1]?.url || hotel.images?.[0]?.url}
+                                alt={hotel.name}
+                                className="h-full w-full rounded-2xl object-cover"
+                            />
+
+                            <div className="relative h-full overflow-hidden rounded-2xl">
+                                <img
+                                    src={hotel.images?.[2]?.url || hotel.images?.[0]?.url}
+                                    alt={hotel.name}
+                                    className="h-full w-full object-cover"
+                                />
+
+                                <button
+                                    type="button"
+                                    onClick={() => toggleLike(hotel._id)}
+                                    className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-full bg-white/90 shadow"
+                                >
+                                    <Heart
+                                        size={18}
+                                        className={
+                                            isLiked(hotel._id)
+                                                ? "fill-red-500 text-red-500"
+                                                : ""
+                                        }
+                                    />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-7">
+                        <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
+                            <div>
+                                <p className="text-sm font-semibold uppercase tracking-wider text-blue-600">
+                                    {hotel.hotelTypeId?.name || hotel.hotelType}
+                                </p>
+
+                                <h1 className="mt-2 text-3xl font-bold text-slate-900 md:text-4xl">
+                                    {hotel.name}
+                                </h1>
+
+                                <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                                    <span className="flex items-center gap-1">
+                                        <MapPin size={16} />
+                                        {hotel.address?.addressLine}, {hotel.address?.city}
+                                    </span>
+
+                                    <span className="flex items-center gap-1">
+                                        <Star
+                                            size={16}
+                                            className="fill-amber-400 text-amber-400"
+                                        />
+                                        {hotel.averageRating} · {hotel.reviewCount} đánh giá
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div className="rounded-2xl bg-blue-50 px-5 py-4 text-right">
+                                <p className="text-xs text-blue-600">Giá từ</p>
+
+                                <p className="text-2xl font-bold text-slate-900">
+                                    {money(minPrice)}đ
+                                </p>
+
+                                <p className="text-xs text-slate-500">/ đêm</p>
+                            </div>
+                        </div>
+
+                        <p className="mt-6 max-w-4xl leading-7 text-slate-600">
+                            {hotel.description}
+                        </p>
+
+                        <div className="mt-6 flex flex-wrap gap-2">
+                            {(hotel.amenities || []).map((a) => (
+                                <span
+                                    key={a._id}
+                                    className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600"
+                                >
+                                    {a.name}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </section>
+
+                <section className="mt-8">
+                    <h2 className="text-2xl font-bold text-slate-900">Chọn loại phòng</h2>
+
+                    <div className="mt-5 grid gap-5 lg:grid-cols-2">
+                        {roomTypes.map((room) => (
+                            <div
+                                key={room._id}
+                                className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"
+                            >
+                                <div className="flex gap-4">
+                                    <img
+                                        src={room.images?.[0]?.url || hotel.images?.[0]?.url}
+                                        alt={room.name}
+                                        className="h-28 w-36 rounded-xl object-cover"
+                                    />
+
+                                    <div className="min-w-0 flex-1">
+                                        <h3 className="text-lg font-bold text-slate-900">
+                                            {room.name}
+                                        </h3>
+
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            {room.size}m² · {room.bedType} · tối đa{" "}
+                                            {room.capacity?.total} khách
+                                        </p>
+
+                                        <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
+                                            <span className="flex items-center gap-1">
+                                                <Users size={14} />
+                                                {room.capacity?.adults} người lớn
+                                            </span>
+
+                                            <span className="flex items-center gap-1">
+                                                <CheckCircle2
+                                                    size={14}
+                                                    className="text-emerald-500"
+                                                />
+                                                Còn phòng
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="mt-5 flex items-end justify-between border-t border-slate-100 pt-4">
+                                    <div>
+                                        <span className="text-xl font-bold">
+                                            {money(room.basePrice)}đ
+                                        </span>
+
+                                        <span className="text-xs text-slate-400">
+                                            {" "}
+                                            / đêm
+                                        </span>
+                                    </div>
+
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            nav(
+                                                `/booking?hotelId=${hotel._id}&roomTypeId=${room._id}`
+                                            )
+                                        }
+                                        className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-600"
+                                    >
+                                        Đặt phòng
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </section>
+
+                <section className="mt-12 rounded-3xl border border-slate-100 bg-white p-6 shadow-xs sm:p-8">
+                    <div className="flex flex-col gap-6 border-b border-slate-100 pb-6 md:flex-row md:items-center md:justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 text-blue-600">
+                                <span className="text-xs font-bold uppercase tracking-wider">
+                                    Đánh giá từ khách hàng
+                                </span>
+                            </div>
+                            <h2 className="mt-1 text-2xl font-bold text-slate-900">
+                                Trải nghiệm thực tế tại {hotel.name}
+                            </h2>
+                        </div>
+
+                        <div className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                            <div className="flex h-14 w-14 items-center justify-center text-2xl font-extrabold text-slate-900">
+                                {reviewStats.average}
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-1.5">
+                                    <StarRating
+                                        value={Math.round(Number(reviewStats.average) || 5)}
+                                        size={16}
+                                    />
+                                    <span className="text-xs font-bold text-slate-700">
+                                        {Number(reviewStats.average) >= 4.5
+                                            ? "Tuyệt vời"
+                                            : Number(reviewStats.average) >= 4
+                                            ? "Rất tốt"
+                                            : "Hài lòng"}
+                                    </span>
+                                </div>
+                                <p className="mt-0.5 text-xs text-slate-400">
+                                    {reviewStats.total} lượt đánh giá thực tế
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {reviewStats.total > 0 && (
+                        <div className="mt-6 flex flex-wrap items-center gap-2">
+                            <button
+                                type="button"
+                                onClick={() => setReviewFilter("ALL")}
+                                className={`rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                                    reviewFilter === "ALL"
+                                        ? "bg-slate-900 text-white shadow-xs"
+                                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                }`}
+                            >
+                                Tất cả ({reviewStats.total})
+                            </button>
+
+                            {reviewStats.withPhotos > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={() => setReviewFilter("WITH_PHOTOS")}
+                                    className={`inline-flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-semibold transition ${
+                                        reviewFilter === "WITH_PHOTOS"
+                                            ? "bg-blue-600 text-white shadow-xs"
+                                            : "bg-blue-50 text-blue-700 hover:bg-blue-100"
+                                    }`}
+                                >
+                                    <Camera size={14} />
+                                    Có hình ảnh ({reviewStats.withPhotos})
+                                </button>
+                            )}
+
+                            {[5, 4, 3, 2, 1].map((s) => {
+                                const count = reviewStats.counts[s] || 0;
+                                if (count === 0 && reviewFilter !== String(s)) return null;
+                                return (
+                                    <button
+                                        key={s}
+                                        type="button"
+                                        onClick={() => setReviewFilter(String(s))}
+                                        className={`inline-flex items-center gap-1 rounded-xl px-3.5 py-2 text-xs font-semibold transition ${
+                                            reviewFilter === String(s)
+                                                ? "bg-amber-500 text-white shadow-xs"
+                                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                                        }`}
+                                    >
+                                        <span>{s} sao</span>
+                                        <span className="opacity-75">({count})</span>
+                                    </button>
+                                );
+                            })}
+                        </div>
+                    )}
+
+                    <div className="mt-6">
+                        {filteredReviews.length > 0 ? (
+                            <div className="grid gap-4 md:grid-cols-2">
+                                {filteredReviews.map((r) => (
+                                    <ReviewCard key={r._id} review={r} />
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center">
+                                <MessageSquareText
+                                    size={32}
+                                    className="mx-auto text-slate-300"
+                                />
+                                <p className="mt-3 text-sm font-medium text-slate-500">
+                                    {reviewStats.total > 0
+                                        ? "Không có đánh giá nào phù hợp với bộ lọc đã chọn."
+                                        : "Chưa có đánh giá nào cho khách sạn này."}
+                                </p>
+                                {reviewFilter !== "ALL" && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setReviewFilter("ALL")}
+                                        className="mt-3 text-xs font-semibold text-blue-600 hover:underline"
+                                    >
+                                        Xem tất cả {reviewStats.total} đánh giá
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </section>
+            </main>
+
+            <Footer />
+        </div>
+    );
+}
